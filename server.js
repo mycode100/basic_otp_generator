@@ -1,49 +1,54 @@
 const express = require("express");
-const cors = require("cors");
-
 const app = express();
-app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 
-// In-memory OTP storage (for demo only)
-let otpStore = {};
-
-// Generate OTP
+// OTP Route
 app.post("/generate-otp", (req, res) => {
   const { phone } = req.body;
 
   if (!phone) {
-    return res.status(400).json({ message: "Phone number required" });
+    return res.status(400).json({ success: false, message: "Phone required" });
   }
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore[phone] = otp;
-
-  console.log(`OTP for ${phone}: ${otp}`);
+  const otp = Math.floor(100000 + Math.random() * 900000);
 
   res.json({
     success: true,
     message: "OTP generated successfully",
-    otp: otp // remove in real production
+    otp: otp
   });
 });
 
-// Verify OTP
-app.post("/verify-otp", (req, res) => {
-  const { phone, otp } = req.body;
+// Loan Details Route
+app.post("/loan-details", (req, res) => {
+  const { phone } = req.body;
 
-  if (otpStore[phone] === otp) {
-    delete otpStore[phone];
-    return res.json({ success: true, message: "OTP verified" });
+  if (!phone) {
+    return res.status(400).json({ success: false, message: "Phone required" });
   }
 
-  res.status(400).json({ success: false, message: "Invalid OTP" });
+  // Create deterministic unique values based on phone
+  const seed = parseInt(phone.slice(-4));
+
+  const loanAmount = 100000 + (seed * 37) % 900000;
+  const outstanding = Math.floor(loanAmount * 0.42);
+  const emi = Math.floor(outstanding / 24);
+  const dueDay = (seed % 28) + 1;
+
+  res.json({
+    success: true,
+    loanAmount: loanAmount,
+    outstandingAmount: outstanding,
+    emi: emi,
+    nextDueDate: `${dueDay}-03-2026`,
+    status: "Active"
+  });
 });
 
 app.get("/", (req, res) => {
-  res.send("OTP Server Running");
+  res.send("OTP & Loan Server Running");
 });
 
 app.listen(PORT, () => {
